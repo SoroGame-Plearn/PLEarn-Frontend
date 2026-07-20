@@ -13,6 +13,7 @@ Browse → Solve → Earn → Track
 ## Table of Contents
 
 - [Overview](#overview)
+- [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
@@ -31,6 +32,76 @@ Browse → Solve → Earn → Track
 | 1 | `contracts/` | Soroban smart contracts — challenge engine & reward logic |
 | 2 | `backend/` | REST API — progress tracking, submission validation |
 | **3** | **`frontend/`** | **Next.js UI — this repo** |
+
+### System Architecture
+
+Plearn integrates three independent phases into a unified Web3 learning platform. See the full architecture details in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+**Quick Flow:**
+```
+User connects wallet → Browse challenges → Submit solution → Freighter signs XDR → Backend broadcasts to blockchain → Contract distributes rewards → Progress updated
+```
+
+For comprehensive architecture documentation including data flows, wallet integration details, and integration points, see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+#### High-Level System Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          PLEARN SYSTEM ARCHITECTURE                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────────────┐
+    │  User's Browser      │
+    │  ┌────────────────┐  │
+    │  │ Next.js        │  │  Phase 3: Frontend
+    │  │ Frontend App   │  │
+    │  └────────────────┘  │
+    │         ↓            │
+    │  ┌────────────────┐  │
+    │  │ Freighter      │  │ Browser Extension
+    │  │ Wallet         │  │
+    │  └────────────────┘  │
+    └─────────────────┬────┘
+                      │
+        ┌─────────────┼─────────────┐
+        │             │             │
+        ↓             ↓             ↓
+   Challenge      Wallet       Transaction
+   Data Fetch    Connection    Signing
+        │             │             │
+        └─────────────┼─────────────┘
+                      ↓
+            ┌──────────────────────┐
+            │  Backend REST API    │  Phase 2: Backend
+            │  ├─ Challenges      │
+            │  ├─ Progress        │
+            │  ├─ Leaderboard     │
+            │  └─ Submit          │
+            └──────┬───────────────┘
+                   │
+        ┌──────────┴──────────┐
+        ↓                     ↓
+   PostgreSQL         Stellar Network
+   Database          (Blockchain)
+                          │
+                          ↓
+                  ┌─────────────────┐
+                  │ Soroban Smart   │  Phase 1: Contracts
+                  │ Contracts       │
+                  │ ├─ Challenge    │
+                  │ ├─ Reward       │
+                  │ └─ Validator    │
+                  └─────────────────┘
+```
+
+**Key Integration Points:**
+- **Frontend ↔ Wallet:** Freighter for wallet connection and transaction signing
+- **Frontend ↔ Backend:** REST API calls for data and transaction submission
+- **Backend ↔ Blockchain:** Broadcasting signed transactions and listening for events
+- **All Three Phases:** Coordinated reward distribution and progress tracking
+
+For detailed component descriptions, data flows, and security considerations, refer to [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
 ---
 
