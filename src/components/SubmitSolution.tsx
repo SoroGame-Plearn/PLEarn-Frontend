@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { useWallet } from "@/context/WalletContext";
-import { submitSolution } from "@/lib/api";
+import { ApiError, submitSolution } from "@/lib/api";
 import { CheckCircle, Loader2 } from "lucide-react";
+
+const ERROR_COPY: Record<string, string> = {
+  NETWORK_ERROR: "Couldn't reach the server. Check your connection and try again.",
+  HTTP_ERROR: "The server rejected the submission.",
+  PARSE_ERROR: "The server sent back an unreadable response.",
+  VALIDATION_ERROR: "The server's response didn't match what we expected.",
+};
 
 export default function SubmitSolution({ challengeId }: { challengeId: string }) {
   const { address, connected, connect, signTx } = useWallet();
@@ -22,7 +29,11 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
       await submitSolution(challengeId, address, signedXdr);
       setStatus("success");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Submission failed");
+      if (err instanceof ApiError) {
+        setError(ERROR_COPY[err.code] ?? err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Submission failed");
+      }
       setStatus("error");
     }
   }

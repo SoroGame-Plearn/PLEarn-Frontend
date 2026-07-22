@@ -1,37 +1,108 @@
-import type { Challenge, LeaderboardEntry, UserProgress } from "@/types";
+import type { ZodType } from "zod";
+import { ApiError } from "./api-error";
+import {
+  ChallengeListSchema,
+  ChallengeSchema,
+  LeaderboardListSchema,
+  SubmissionResponseSchema,
+  UserStatsSchema,
+  type Challenge,
+  type ChallengeList,
+  type LeaderboardList,
+  type SubmissionResponse,
+  type UserProgress,
+} from "./schemas";
 
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001";
 
-async function fetcher<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { next: { revalidate: 60 } });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+const DEFAULT_GET_INIT: RequestInit = { next: { revalidate: 60 } };
+
+/**
+ * Fetches `path`, then validates the JSON body against `schema` before
+ * returning it. Every failure mode — network failure, non-2xx status,
+ * unparsable body, schema mismatch — surfaces as a typed ApiError so
+ * callers can branch on `error.code` instead of parsing messages.
+ */
+async function request<T>(
+  path: string,
+  schema: ZodType<T>,
+  init: RequestInit = DEFAULT_GET_INIT
+): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, init);
+  } catch (err) {
+    throw new ApiError(`Network error while requesting ${path}`, {
+      code: "NETWORK_ERROR",
+      cause: err,
+    });
+  }
+
+  if (!res.ok) {
+    let details: unknown;
+    try {
+      details = await res.json();
+    } catch {
+      // Response body wasn't JSON (or was empty) — nothing more to attach.
+    }
+    throw new ApiError(`API request to ${path} failed with status ${res.status}`, {
+      code: "HTTP_ERROR",
+      status: res.status,
+      details,
+    });
+  }
+
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch (err) {
+    throw new ApiError(`Failed to parse JSON response from ${path}`, {
+      code: "PARSE_ERROR",
+      status: res.status,
+      cause: err,
+    });
+  }
+
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError(`Response from ${path} did not match the expected schema`, {
+      code: "VALIDATION_ERROR",
+      status: res.status,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  return parsed.data;
 }
 
 export const getChallenges = (difficulty = "all") =>
-  fetcher<Challenge[]>(
-    `/challenges${difficulty !== "all" ? `?difficulty=${difficulty}` : ""}`
+  request<ChallengeList>(
+    `/challenges${difficulty !== "all" ? `?difficulty=${difficulty}` : ""}`,
+    ChallengeListSchema
   );
 
 export const getChallenge = (id: string) =>
-  fetcher<Challenge>(`/challenges/${id}`);
+  request<Challenge>(`/challenges/${id}`, ChallengeSchema);
 
 export const getLeaderboard = () =>
-  fetcher<LeaderboardEntry[]>("/leaderboard");
+  request<LeaderboardList>("/leaderboard", LeaderboardListSchema);
 
 export const getProgress = (address?: string) =>
-  fetcher<UserProgress>(`/progress${address ? `?address=${address}` : ""}`);
+  request<UserProgress>(
+    `/progress${address ? `?address=${address}` : ""}`,
+    UserStatsSchema
+  );
 
-export async function submitSolution(
+export const submitSolution = (
   challengeId: string,
   address: string,
   signedXdr: string
-) {
-  const res = await fetch(`${BASE}/submit`, {
+) =>
+  request<SubmissionResponse>("/submit", SubmissionResponseSchema, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ challengeId, address, signedXdr }),
   });
-  if (!res.ok) throw new Error("Submission failed");
-  return res.json();
-}
+
+export { ApiError };
+export type { ApiErrorCode } from "./api-error";

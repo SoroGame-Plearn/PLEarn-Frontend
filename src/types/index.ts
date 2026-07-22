@@ -1,24 +1,12 @@
-export type Difficulty = "beginner" | "intermediate" | "advanced";
-
-export interface Challenge {
-  id: string;
-  title: string;
-  description: string;
-  instructions: string;
-  difficulty: Difficulty;
-  reward: number;
-  solved: boolean;
-}
-
-export interface LeaderboardEntry {
-  address: string;
-  solved: number;
-  totalRewards: number;
-}
-
-export interface UserProgress {
-  address: string;
-  solved: number;
-  totalRewards: number;
-  completedChallenges: Pick<Challenge, "id" | "title" | "difficulty" | "reward">[];
-}
+// These types are inferred from the Zod schemas in src/lib/schemas.ts, which
+// is the source of truth for API response shapes. Re-exported here so
+// existing `@/types` imports keep working.
+export type {
+  Challenge,
+  ChallengeList,
+  Difficulty,
+  LeaderboardEntry,
+  LeaderboardList,
+  SubmissionResponse,
+  UserProgress,
+} from "@/lib/schemas";
