@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getChallenge } from "@/lib/api";
+import { ApiError, getChallenge } from "@/lib/api";
 import SubmitSolution from "@/components/SubmitSolution";
 import DifficultyBadge from "@/components/DifficultyBadge";
 import { notFound } from "next/navigation";
@@ -11,8 +11,14 @@ export default async function ChallengePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const challenge = await getChallenge(id);
-  if (!challenge) notFound();
+
+  let challenge;
+  try {
+    challenge = await getChallenge(id);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) notFound();
+    throw err;
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 flex flex-col gap-8">

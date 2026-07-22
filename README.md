@@ -18,6 +18,7 @@ Browse → Solve → Earn → Track
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
+- [API Layer](#api-layer)
 - [Features](#features)
 - [Wallet Integration](#wallet-integration)
 - [Contributing](#contributing)
@@ -190,6 +191,16 @@ Open [http://localhost:3000](http://localhost:3000).
 | `NEXT_PUBLIC_BACKEND_URL` | `http://localhost:3001` | Plearn backend base URL |
 | `NEXT_PUBLIC_STELLAR_NETWORK` | `testnet` | `testnet` or `mainnet` |
 | `NEXT_PUBLIC_CONTRACT_ID` | — | Deployed Soroban contract ID |
+
+---
+
+## API Layer
+
+All backend responses are validated at runtime with [Zod](https://zod.dev)
+before they reach the UI, and failures surface as a typed `ApiError`
+(`NETWORK_ERROR` / `HTTP_ERROR` / `PARSE_ERROR` / `VALIDATION_ERROR`) caught
+by a route-level error boundary. See [`docs/API.md`](./docs/API.md) for how
+the layer is structured and how to add a new endpoint.
 
 ---
 
