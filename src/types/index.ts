@@ -7,6 +7,9 @@ export type {
   Difficulty,
   LeaderboardEntry,
   LeaderboardList,
+  PaginatedChallengeList,
+  PaginatedLeaderboard,
+  PaginationParams,
   SubmissionResponse,
   UserProgress,
 } from "@/lib/schemas";

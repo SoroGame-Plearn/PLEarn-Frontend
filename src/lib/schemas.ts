@@ -53,6 +53,22 @@ export const SubmissionResponseSchema = z.object({
   reward: z.number().optional(),
 });
 
+/**
+ * Generic cursor-based paginated response wrapper.
+ * `nextCursor` is absent (or null) when there are no more pages.
+ */
+export function PaginatedSchema<T extends z.ZodTypeAny>(itemSchema: T) {
+  return z.object({
+    items: z.array(itemSchema),
+    nextCursor: z.string().nullable().optional(),
+    hasMore: z.boolean(),
+    total: z.number().optional(),
+  });
+}
+
+export const PaginatedChallengeListSchema = PaginatedSchema(ChallengeSchema);
+export const PaginatedLeaderboardSchema = PaginatedSchema(LeaderboardEntrySchema);
+
 export type Difficulty = z.infer<typeof DifficultySchema>;
 export type Challenge = z.infer<typeof ChallengeSchema>;
 export type ChallengeList = z.infer<typeof ChallengeListSchema>;
@@ -60,3 +76,12 @@ export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
 export type LeaderboardList = z.infer<typeof LeaderboardListSchema>;
 export type UserProgress = z.infer<typeof UserStatsSchema>;
 export type SubmissionResponse = z.infer<typeof SubmissionResponseSchema>;
+export type PaginatedChallengeList = z.infer<typeof PaginatedChallengeListSchema>;
+export type PaginatedLeaderboard = z.infer<typeof PaginatedLeaderboardSchema>;
+
+/** Parameters accepted by every paginated endpoint. */
+export interface PaginationParams {
+  cursor?: string;
+  limit?: number;
+  difficulty?: string;
+}
