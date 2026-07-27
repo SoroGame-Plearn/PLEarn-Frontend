@@ -9,6 +9,7 @@ const links = [
   { href: "/challenges", label: "Challenges" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/activity", label: "Activity" },
 ];
 
 export default function Navbar() {
