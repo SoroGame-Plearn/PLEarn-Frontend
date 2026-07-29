@@ -9,6 +9,23 @@ import { z } from "zod";
  * runtime validation and the compile-time types can never drift apart.
  */
 
+// ─── Generic cursor-based paginated response wrapper ────────────────────────
+
+/**
+ * Generic cursor-based paginated response wrapper.
+ * `nextCursor` is absent (or null) when there are no more pages.
+ */
+export function PaginatedSchema<T extends z.ZodTypeAny>(itemSchema: T) {
+  return z.object({
+    items: z.array(itemSchema),
+    nextCursor: z.string().nullable().optional(),
+    hasMore: z.boolean(),
+    total: z.number().optional(),
+  });
+}
+
+// ─── Challenge schemas ───────────────────────────────────────────────────────
+
 export const DifficultySchema = z.enum(["beginner", "intermediate", "advanced"]);
 
 export const ChallengeSchema = z.object({
@@ -30,6 +47,8 @@ export const CompletedChallengeSchema = ChallengeSchema.pick({
   reward: true,
 });
 
+// ─── Leaderboard schemas ─────────────────────────────────────────────────────
+
 export const LeaderboardEntrySchema = z.object({
   address: z.string(),
   solved: z.number(),
@@ -37,6 +56,8 @@ export const LeaderboardEntrySchema = z.object({
 });
 
 export const LeaderboardListSchema = z.array(LeaderboardEntrySchema);
+
+// ─── User / progress schemas ─────────────────────────────────────────────────
 
 export const UserStatsSchema = z.object({
   address: z.string(),
@@ -53,21 +74,57 @@ export const SubmissionResponseSchema = z.object({
   reward: z.number().optional(),
 });
 
-/**
- * Generic cursor-based paginated response wrapper.
- * `nextCursor` is absent (or null) when there are no more pages.
- */
-export function PaginatedSchema<T extends z.ZodTypeAny>(itemSchema: T) {
-  return z.object({
-    items: z.array(itemSchema),
-    nextCursor: z.string().nullable().optional(),
-    hasMore: z.boolean(),
-    total: z.number().optional(),
-  });
-}
+// ─── Activity / Transaction schemas ─────────────────────────────────────────
 
-export const PaginatedChallengeListSchema = PaginatedSchema(ChallengeSchema);
-export const PaginatedLeaderboardSchema = PaginatedSchema(LeaderboardEntrySchema);
+/** Broad category of on-chain operation visible in the activity explorer. */
+export const TxTypeSchema = z.enum(["submit", "claim", "other"]);
+
+/** Settled status of a transaction as tracked by the backend. */
+export const TxStatusSchema = z.enum(["confirmed", "failed", "pending"]);
+
+/**
+ * A single on-chain activity record returned by GET /activity.
+ * `challengeId` / `challengeTitle` are optional — some transactions (e.g. raw
+ * PLN transfers) may not be associated with a specific challenge.
+ */
+export const ActivityItemSchema = z.object({
+  /** Unique backend-assigned record id. */
+  id: z.string(),
+  /** Stellar transaction hash — links to the block explorer. */
+  txHash: z.string(),
+  /** ISO-8601 timestamp when the transaction was ledger-confirmed. */
+  timestamp: z.string().datetime({ offset: true }),
+  type: TxTypeSchema,
+  status: TxStatusSchema,
+  /** PLN reward amount credited (0 for non-claim transactions). */
+  reward: z.number(),
+  challengeId: z.string().optional(),
+  challengeTitle: z.string().optional(),
+  /** Stellar account that initiated the transaction. */
+  address: z.string(),
+});
+
+export const ActivityListSchema = z.array(ActivityItemSchema);
+
+export const PaginatedActivitySchema = PaginatedSchema(ActivityItemSchema);
+
+/**
+ * Filter parameters accepted by GET /activity.
+ * All fields are optional — omitting them returns the full unfiltered history.
+ */
+export const ActivityFilterSchema = z.object({
+  address: z.string().optional(),
+  type: TxTypeSchema.optional(),
+  status: TxStatusSchema.optional(),
+  /** ISO-8601 date string, inclusive lower bound (e.g. "2026-01-01"). */
+  dateFrom: z.string().optional(),
+  /** ISO-8601 date string, inclusive upper bound (e.g. "2026-12-31"). */
+  dateTo: z.string().optional(),
+  cursor: z.string().optional(),
+  limit: z.number().int().positive().optional(),
+});
+
+// ─── Inferred TypeScript types ───────────────────────────────────────────────
 
 export type Difficulty = z.infer<typeof DifficultySchema>;
 export type Challenge = z.infer<typeof ChallengeSchema>;
@@ -76,12 +133,10 @@ export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
 export type LeaderboardList = z.infer<typeof LeaderboardListSchema>;
 export type UserProgress = z.infer<typeof UserStatsSchema>;
 export type SubmissionResponse = z.infer<typeof SubmissionResponseSchema>;
-export type PaginatedChallengeList = z.infer<typeof PaginatedChallengeListSchema>;
-export type PaginatedLeaderboard = z.infer<typeof PaginatedLeaderboardSchema>;
 
-/** Parameters accepted by every paginated endpoint. */
-export interface PaginationParams {
-  cursor?: string;
-  limit?: number;
-  difficulty?: string;
-}
+export type TxType = z.infer<typeof TxTypeSchema>;
+export type TxStatus = z.infer<typeof TxStatusSchema>;
+export type ActivityItem = z.infer<typeof ActivityItemSchema>;
+export type ActivityList = z.infer<typeof ActivityListSchema>;
+export type PaginatedActivity = z.infer<typeof PaginatedActivitySchema>;
+export type ActivityFilter = z.infer<typeof ActivityFilterSchema>;
