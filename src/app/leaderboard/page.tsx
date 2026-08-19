@@ -79,9 +79,9 @@ export default function LeaderboardPage() {
     <div className="max-w-2xl mx-auto px-6 py-12">
       <div className="flex items-center gap-3 mb-8">
         <Trophy className="text-brand-light" size={28} />
-        <h1 className="text-3xl font-bold">Leaderboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Leaderboard</h1>
         {total !== undefined && (
-          <span className="ml-auto text-sm text-gray-500">{total} solvers</span>
+          <span className="ml-auto text-sm text-gray-400 dark:text-gray-500">{total} solvers</span>
         )}
       </div>
 
@@ -92,7 +92,7 @@ export default function LeaderboardPage() {
       )}
 
       {loadState === "idle" && entries.length === 0 && (
-        <p className="text-center text-gray-500 mt-16">
+        <p className="text-center text-gray-400 dark:text-gray-500 mt-16">
           No leaderboard entries yet. Be the first to solve a challenge!
         </p>
       )}
@@ -105,28 +105,28 @@ export default function LeaderboardPage() {
               return (
                 <div
                   key={entry.address}
-                  className="flex items-center justify-between bg-card border border-white/5 rounded-xl px-5 py-4"
+                  className="flex items-center justify-between bg-white dark:bg-card border border-black/10 dark:border-white/5 rounded-xl px-5 py-4 shadow-sm dark:shadow-none"
                 >
                   <div className="flex items-center gap-4">
                     <span
                       className={`text-lg font-bold w-6 text-center ${
                         rank === 1
-                          ? "text-yellow-400"
+                          ? "text-yellow-500 dark:text-yellow-400"
                           : rank === 2
-                          ? "text-gray-300"
+                          ? "text-gray-500 dark:text-gray-300"
                           : rank === 3
-                          ? "text-amber-600"
-                          : "text-gray-500"
+                          ? "text-amber-600 dark:text-amber-600"
+                          : "text-gray-400 dark:text-gray-500"
                       }`}
                     >
                       {rank}
                     </span>
-                    <span className="font-mono text-sm text-gray-300">
+                    <span className="font-mono text-sm text-gray-700 dark:text-gray-300">
                       {entry.address.slice(0, 6)}…{entry.address.slice(-4)}
                     </span>
                   </div>
                   <div className="flex items-center gap-6 text-sm">
-                    <span className="text-gray-400">{entry.solved} solved</span>
+                    <span className="text-gray-500 dark:text-gray-400">{entry.solved} solved</span>
                     <span className="text-brand-light font-semibold">
                       {entry.totalRewards} PLN
                     </span>
@@ -142,15 +142,15 @@ export default function LeaderboardPage() {
               onClick={goPrev}
               disabled={isFirstPage}
               aria-label="Previous page"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/10 text-sm font-medium transition
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium transition
                          disabled:opacity-30 disabled:cursor-not-allowed
-                         enabled:hover:border-brand/50 enabled:hover:text-brand-light"
+                         enabled:hover:border-brand/50 enabled:hover:text-brand dark:enabled:hover:text-brand-light"
             >
               <ChevronLeft size={15} />
               Previous
             </button>
 
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               {startRank}–{startRank + entries.length - 1}
               {total !== undefined ? ` of ${total}` : ""}
             </span>
@@ -159,9 +159,9 @@ export default function LeaderboardPage() {
               onClick={goNext}
               disabled={!hasMore || !nextCursor}
               aria-label="Next page"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/10 text-sm font-medium transition
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium transition
                          disabled:opacity-30 disabled:cursor-not-allowed
-                         enabled:hover:border-brand/50 enabled:hover:text-brand-light"
+                         enabled:hover:border-brand/50 enabled:hover:text-brand dark:enabled:hover:text-brand-light"
             >
               Next
               <ChevronRight size={15} />
@@ -169,7 +169,7 @@ export default function LeaderboardPage() {
           </div>
 
           {!hasMore && (
-            <p className="text-center text-gray-600 text-xs mt-4">
+            <p className="text-center text-gray-400 dark:text-gray-600 text-xs mt-4">
               End of leaderboard
             </p>
           )}
