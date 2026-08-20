@@ -4,3 +4,8 @@ node_modules/
 .env
 out/
 *.tsbuildinfo
+
+# Playwright E2E tests
+playwright-report/
+test-results/
+.auth/
