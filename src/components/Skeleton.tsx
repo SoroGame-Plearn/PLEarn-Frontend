@@ -7,7 +7,7 @@ function Shimmer({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "bg-white/10 rounded animate-pulse",
+        "bg-black/10 dark:bg-white/10 rounded animate-pulse",
         className
       )}
       aria-hidden="true"
@@ -18,14 +18,14 @@ function Shimmer({ className }: { className?: string }) {
 /** Mimics a single ChallengeCard skeleton. */
 export function ChallengeCardSkeleton() {
   return (
-    <div className="bg-card border border-white/5 rounded-2xl p-5 flex flex-col gap-3">
+    <div className="bg-white dark:bg-card border border-black/10 dark:border-white/5 rounded-2xl p-5 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <Shimmer className="h-4 w-3/4" />
         <Shimmer className="h-5 w-20 rounded-full" />
       </div>
       <Shimmer className="h-3 w-full" />
       <Shimmer className="h-3 w-4/5" />
-      <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-black/5 dark:border-white/5">
         <Shimmer className="h-4 w-16" />
         <Shimmer className="h-3 w-3" />
       </div>
@@ -47,7 +47,7 @@ export function ChallengeGridSkeleton({ count = 6 }: { count?: number }) {
 /** Mimics a single leaderboard row skeleton. */
 export function LeaderboardRowSkeleton() {
   return (
-    <div className="flex items-center justify-between bg-card border border-white/5 rounded-xl px-5 py-4">
+    <div className="flex items-center justify-between bg-white dark:bg-card border border-black/10 dark:border-white/5 rounded-xl px-5 py-4">
       <div className="flex items-center gap-4">
         <Shimmer className="h-5 w-5" />
         <Shimmer className="h-4 w-32" />

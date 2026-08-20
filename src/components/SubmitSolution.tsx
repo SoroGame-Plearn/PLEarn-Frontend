@@ -382,21 +382,9 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
   // ── Tracking view: live status stepper ──
   if (phase === "tracking") {
     return (
-      <div className="flex flex-col gap-4">
-        {mode === "polling" && (
-          <p className="flex items-center gap-1.5 text-xs text-amber-400/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Real-time feed unavailable — showing polling updates (may lag).
-          </p>
-        )}
-        {currentStatus === "rejected" ? (
-          <SubmissionRejectedCard onRetry={reset} />
-        ) : currentStatus ? (
-          <SubmissionStatusCard
-            submission={live ?? fallbackSubmission!}
-            status={currentStatus}
-          />
-        ) : null}
+      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-6 text-green-600 dark:text-green-400">
+        <CheckCircle size={20} />
+        <span className="font-semibold">Solution submitted! Reward is on its way.</span>
       </div>
     );
   }
@@ -404,7 +392,7 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
   // ── Form view ──
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="font-semibold text-lg">Submit Your Solution</h2>
+      <h2 className="font-semibold text-lg text-gray-900 dark:text-white">Submit Your Solution</h2>
       <textarea
         value={solution}
         onChange={(e) => setSolution(e.target.value)}

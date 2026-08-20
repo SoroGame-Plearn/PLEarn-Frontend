@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const filters = ["all", "beginner", "intermediate", "advanced"] as const;
@@ -19,7 +19,7 @@ export default function DifficultyFilter({ active }: { active: string }) {
             "text-sm px-4 py-1.5 rounded-full border transition capitalize",
             active === f
               ? "bg-brand border-brand text-white"
-              : "border-white/10 text-gray-400 hover:border-brand-light hover:text-white"
+              : "border-black/10 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-brand-light hover:text-brand dark:hover:text-white"
           )}
         >
           {f}

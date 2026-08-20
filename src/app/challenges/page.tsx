@@ -111,8 +111,8 @@ function ChallengesContent() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
-      <h1 className="text-3xl font-bold mb-2">Challenges</h1>
-      <p className="text-gray-400 mb-8">
+      <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Challenges</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-8">
         Pick a challenge, write your solution, and earn PLN tokens.
       </p>
 
@@ -150,7 +150,7 @@ function ChallengesContent() {
 
           {/* Error mid-pagination — inline retry */}
           {loadState === "error" && (
-            <div className="mt-6 flex flex-col items-center gap-3 text-sm text-gray-400">
+            <div className="mt-6 flex flex-col items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
               <span>Failed to load the next page.</span>
               <button
                 onClick={() => {
@@ -169,14 +169,14 @@ function ChallengesContent() {
 
       {/* Empty state */}
       {!isFirstLoad && loadState !== "error" && challenges.length === 0 && (
-        <p className="text-gray-500 text-center mt-16">
+        <p className="text-gray-400 dark:text-gray-500 text-center mt-16">
           No challenges found{difficulty !== "all" ? ` for difficulty "${difficulty}"` : ""}.
         </p>
       )}
 
       {/* End-of-list message */}
       {!hasMore && challenges.length > 0 && loadState !== "error" && (
-        <p className="text-center text-gray-600 text-sm mt-8">
+        <p className="text-center text-gray-400 dark:text-gray-600 text-sm mt-8">
           You&apos;ve seen all {challenges.length} challenge
           {challenges.length === 1 ? "" : "s"}.
         </p>
