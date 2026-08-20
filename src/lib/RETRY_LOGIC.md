@@ -178,14 +178,88 @@ The `SubmitSolution` component uses retry logic automatically:
 - Displays clear error messages
 - Tracks retry state for debugging
 
+## Logging for Debugging
+
+The `SubmitSolution` component logs all submission attempts to the browser console for debugging:
+
+### Console Output Examples
+
+**Successful submission after retry:**
+```
+[SubmitSolution] Retry attempt 1 of 3 (1692547123456-abc123)
+  challengeId: "challenge-1"
+  address: "GTEST12..."
+  error: "Network timeout"
+  code: "NETWORK_ERROR"
+  status: undefined
+  waitMs: 1000
+
+[SubmitSolution] Submission successful (1692547123456-abc123)
+  challengeId: "challenge-1"
+  address: "GTEST12..."
+  successfulAttempt: 2
+  totalRetries: 1
+  totalErrors: 1
+```
+
+**Failed submission:**
+```
+[SubmitSolution] Submission failed after 2 retries (1692547123456-abc123)
+  challengeId: "challenge-1"
+  address: "GTEST12..."
+  totalAttempts: 3
+  errors: [
+    { attempt: 1, error: "Server error", code: "HTTP_ERROR", status: 500 },
+    { attempt: 2, error: "Server error", code: "HTTP_ERROR", status: 500 }
+  ]
+```
+
+### Logging Utility
+
+Use `submission-logger.ts` for structured logging:
+
+```typescript
+import {
+  createSubmissionLog,
+  logRetryAttempt,
+  logSubmissionSuccess,
+  analyzeSubmissionLog,
+} from "@/lib/submission-logger";
+
+const log = createSubmissionLog(address, challengeId);
+logRetryAttempt("sub-123", 1, 1000, error, { challengeId, address });
+logSubmissionSuccess("sub-123", 2, 1, 1, { challengeId, address });
+
+const analysis = analyzeSubmissionLog(log);
+console.log(`Error codes: ${analysis.errorCodes.join(", ")}`);
+```
+
+### What Gets Logged
+
+- **Wallet Address**: Masked to first 8 characters (e.g., `GTEST12...`)
+- **Challenge ID**: For correlating submissions with challenges
+- **Retry Attempts**: Attempt number, delay, error details (code, status)
+- **Error Classification**: Network, HTTP status, validation errors
+- **Success/Failure**: Final outcome with retry count
+- **Cancellations**: When user cancels retry attempts
+
+### Privacy Considerations
+
+- Wallet addresses are masked in logs
+- No sensitive transaction data is logged
+- Error messages are user-friendly, not exposing system details
+- Logs are only in browser console (not transmitted by default)
+
 ## Best Practices
 
 1. **Use reasonable timeouts**: Default values work well for most cases
-2. **Implement UI feedback**: Keep users informed about retry progress
-3. **Log failures**: Track failed submissions for debugging
+2. **Implement UI feedback**: Keep users informed about retry progress ✅
+3. **Log failures**: Track failed submissions for debugging ✅
 4. **Don't retry everything**: Use `shouldRetry` to avoid retrying unrecoverable errors
 5. **Monitor retry success rate**: Track how many requests succeed on retry vs first attempt
 6. **Consider max delay**: 30 seconds is a reasonable upper bound for user interactions
+7. **Check browser console**: Review logs for debugging submission issues
+8. **Export logs for monitoring**: Use `exportSubmissionLog()` to send logs to monitoring service
 
 ## Testing
 
