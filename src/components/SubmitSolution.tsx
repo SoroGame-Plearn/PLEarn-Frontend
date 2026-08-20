@@ -185,7 +185,7 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
 
   if (status === "success") {
     return (
-      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-6 text-green-400">
+      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-6 text-green-600 dark:text-green-400">
         <CheckCircle size={20} />
         <span className="font-semibold">Solution submitted! Reward is on its way.</span>
       </div>
@@ -194,7 +194,7 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="font-semibold text-lg">Submit Your Solution</h2>
+      <h2 className="font-semibold text-lg text-gray-900 dark:text-white">Submit Your Solution</h2>
       <textarea
         value={solution}
         onChange={(e) => setSolution(e.target.value)}

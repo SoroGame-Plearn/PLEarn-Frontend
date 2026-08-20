@@ -6,6 +6,18 @@
   --font-mono: "Fira Code", "Cascadia Code", monospace;
 }
 
+/* Smooth theme transition — applied after page load to avoid FOUC */
+html.theme-ready,
+html.theme-ready * {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
+
+/* Light mode base */
 body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+/* Dark mode base */
+.dark body {
   @apply bg-surface text-white;
 }

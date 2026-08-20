@@ -52,22 +52,21 @@ const TYPE_LABEL: Record<TxType, string> = {
 };
 
 const STATUS_COLOR: Record<TxStatus, string> = {
-  confirmed: "text-emerald-400",
-  failed: "text-red-400",
-  pending: "text-yellow-400",
+  confirmed: "text-emerald-600 dark:text-emerald-400",
+  failed: "text-red-500 dark:text-red-400",
+  pending: "text-yellow-600 dark:text-yellow-400",
 };
 
 const STATUS_DOT: Record<TxStatus, string> = {
-  confirmed: "bg-emerald-400",
-  failed: "bg-red-400",
-  pending: "bg-yellow-400",
+  confirmed: "bg-emerald-500 dark:bg-emerald-400",
+  failed: "bg-red-500 dark:bg-red-400",
+  pending: "bg-yellow-500 dark:bg-yellow-400",
 };
 
 // ─── CSV export ───────────────────────────────────────────────────────────────
 
 function escapeCell(value: string | number | undefined): string {
   const s = value == null ? "" : String(value);
-  // Wrap in quotes and escape internal quotes.
   return `"${s.replace(/"/g, '""')}"`;
 }
 
@@ -126,21 +125,21 @@ function StatusBadge({ status }: { status: TxStatus }) {
 function TxRow({ item }: { item: ActivityItem }) {
   const short = `${item.txHash.slice(0, 8)}…${item.txHash.slice(-6)}`;
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-card border border-white/5 rounded-xl px-5 py-4 gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-card border border-black/10 dark:border-white/5 rounded-xl px-5 py-4 gap-3 shadow-sm dark:shadow-none">
       {/* Left: type + challenge */}
       <div className="flex flex-col gap-0.5 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             {TYPE_LABEL[item.type]}
           </span>
           <StatusBadge status={item.status} />
         </div>
         {item.challengeTitle ? (
-          <span className="text-sm text-white truncate">{item.challengeTitle}</span>
+          <span className="text-sm text-gray-900 dark:text-white truncate">{item.challengeTitle}</span>
         ) : (
-          <span className="text-sm text-gray-500 italic">—</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500 italic">—</span>
         )}
-        <span className="text-xs text-gray-500">{formatTs(item.timestamp)}</span>
+        <span className="text-xs text-gray-400 dark:text-gray-500">{formatTs(item.timestamp)}</span>
       </div>
 
       {/* Right: hash + reward */}
@@ -180,13 +179,13 @@ function FilterBar({ filter, onChange }: FilterBarProps) {
     <div className="flex flex-wrap items-end gap-3 mb-6">
       {/* Type filter */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-500 font-medium">Type</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400 font-medium">Type</label>
         <select
           value={filter.type ?? ""}
           onChange={(e) =>
             set({ type: (e.target.value as TxType) || undefined })
           }
-          className="bg-card border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand/50"
+          className="bg-gray-100 dark:bg-card border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand/50"
         >
           <option value="">All types</option>
           <option value="submit">Submit</option>
@@ -197,13 +196,13 @@ function FilterBar({ filter, onChange }: FilterBarProps) {
 
       {/* Status filter */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-500 font-medium">Status</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400 font-medium">Status</label>
         <select
           value={filter.status ?? ""}
           onChange={(e) =>
             set({ status: (e.target.value as TxStatus) || undefined })
           }
-          className="bg-card border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand/50"
+          className="bg-gray-100 dark:bg-card border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand/50"
         >
           <option value="">All statuses</option>
           <option value="confirmed">Confirmed</option>
@@ -214,23 +213,23 @@ function FilterBar({ filter, onChange }: FilterBarProps) {
 
       {/* Date from */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-500 font-medium">From</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400 font-medium">From</label>
         <input
           type="date"
           value={filter.dateFrom ?? ""}
           onChange={(e) => set({ dateFrom: e.target.value || undefined })}
-          className="bg-card border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand/50"
+          className="bg-gray-100 dark:bg-card border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand/50"
         />
       </div>
 
       {/* Date to */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-500 font-medium">To</label>
+        <label className="text-xs text-gray-500 dark:text-gray-400 font-medium">To</label>
         <input
           type="date"
           value={filter.dateTo ?? ""}
           onChange={(e) => set({ dateTo: e.target.value || undefined })}
-          className="bg-card border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand/50"
+          className="bg-gray-100 dark:bg-card border border-black/10 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-brand/50"
         />
       </div>
 
@@ -244,7 +243,7 @@ function FilterBar({ filter, onChange }: FilterBarProps) {
               limit: filter.limit,
             })
           }
-          className="text-xs text-gray-400 hover:text-white transition self-end pb-2"
+          className="text-xs text-gray-400 hover:text-gray-900 dark:hover:text-white transition self-end pb-2"
         >
           Clear filters
         </button>
@@ -303,7 +302,6 @@ export default function ActivityExplorer({ address }: ActivityExplorerProps) {
         if (!cursor) {
           allItemsRef.current = page.items;
         } else {
-          // Only add truly new items.
           const existing = new Set(allItemsRef.current.map((x) => x.id));
           const fresh = page.items.filter((x) => !existing.has(x.id));
           allItemsRef.current = [...allItemsRef.current, ...fresh];
@@ -372,7 +370,7 @@ export default function ActivityExplorer({ address }: ActivityExplorerProps) {
     <div>
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-2 text-gray-400 text-sm">
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
           <Filter size={14} />
           <span>Filters</span>
           {hasActiveFilter && (
@@ -384,8 +382,8 @@ export default function ActivityExplorer({ address }: ActivityExplorerProps) {
         <button
           onClick={handleExport}
           disabled={allItemsRef.current.length === 0}
-          className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl border border-white/10 transition
-                     hover:border-brand/50 hover:text-brand-light disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-xl border border-black/10 dark:border-white/10 transition
+                     hover:border-brand/50 hover:text-brand dark:hover:text-brand-light disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label="Export filtered activity to CSV"
         >
           <Download size={13} />
@@ -414,7 +412,7 @@ export default function ActivityExplorer({ address }: ActivityExplorerProps) {
 
       {/* Empty state */}
       {loadState === "idle" && items.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-16 text-gray-500">
+        <div className="flex flex-col items-center gap-3 py-16 text-gray-400 dark:text-gray-500">
           <Activity size={32} className="opacity-30" />
           <p className="text-sm">
             {hasActiveFilter
@@ -449,15 +447,15 @@ export default function ActivityExplorer({ address }: ActivityExplorerProps) {
               onClick={goPrev}
               disabled={isFirstPage}
               aria-label="Previous page"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/10 text-sm font-medium transition
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium transition
                          disabled:opacity-30 disabled:cursor-not-allowed
-                         enabled:hover:border-brand/50 enabled:hover:text-brand-light"
+                         enabled:hover:border-brand/50 enabled:hover:text-brand dark:enabled:hover:text-brand-light"
             >
               <ChevronLeft size={15} />
               Previous
             </button>
 
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               {startRank}–{startRank + items.length - 1}
               {total !== undefined ? ` of ${total}` : ""}
             </span>
@@ -466,9 +464,9 @@ export default function ActivityExplorer({ address }: ActivityExplorerProps) {
               onClick={goNext}
               disabled={!hasMore || !nextCursor}
               aria-label="Next page"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-white/10 text-sm font-medium transition
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium transition
                          disabled:opacity-30 disabled:cursor-not-allowed
-                         enabled:hover:border-brand/50 enabled:hover:text-brand-light"
+                         enabled:hover:border-brand/50 enabled:hover:text-brand dark:enabled:hover:text-brand-light"
             >
               Next
               <ChevronRight size={15} />
@@ -476,7 +474,7 @@ export default function ActivityExplorer({ address }: ActivityExplorerProps) {
           </div>
 
           {!hasMore && (
-            <p className="text-center text-gray-600 text-xs mt-4">
+            <p className="text-center text-gray-400 dark:text-gray-600 text-xs mt-4">
               End of activity log
               {allItemsRef.current.length > 0 &&
                 ` · ${allItemsRef.current.length} transaction${allItemsRef.current.length === 1 ? "" : "s"} loaded`}
