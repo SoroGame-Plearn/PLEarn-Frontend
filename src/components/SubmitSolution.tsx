@@ -29,6 +29,16 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
     setError("");
     setRetryState(null);
 
+    const submissionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const submissionLog = {
+      id: submissionId,
+      timestamp: new Date().toISOString(),
+      address,
+      challengeId,
+      attempts: 0,
+      errors: [] as Array<{ attempt: number; error: string; code?: string; status?: number }>,
+    };
+
     try {
       const signedXdr = await signTx(solution);
 
@@ -51,6 +61,28 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
           baseDelay: 1000,
           maxDelay: 30000,
           onRetry: (attempt, delay, error) => {
+            // Log retry attempt for debugging
+            submissionLog.attempts = attempt;
+            const errorLog = {
+              attempt,
+              error: error.message,
+              code: error instanceof ApiError ? error.code : undefined,
+              status: error instanceof ApiError ? error.status : undefined,
+            };
+            submissionLog.errors.push(errorLog);
+
+            console.warn(
+              `[SubmitSolution] Retry attempt ${attempt} of 3 (${submissionId})`,
+              {
+                challengeId,
+                address: address?.slice(0, 8) + "...",
+                error: error.message,
+                code: errorLog.code,
+                status: errorLog.status,
+                waitMs: delay,
+              }
+            );
+
             const newRetryState: RetryState = {
               attempt,
               nextRetryIn: delay,
@@ -77,12 +109,27 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
 
       if (countdownInterval) clearInterval(countdownInterval);
       retryAbortRef.current = null;
+
+      // Log successful submission
+      console.info(`[SubmitSolution] Submission successful (${submissionId})`, {
+        challengeId,
+        address: address?.slice(0, 8) + "...",
+        successfulAttempt: submissionLog.attempts + 1,
+        totalRetries: submissionLog.attempts,
+        totalErrors: submissionLog.errors.length,
+      });
+
       setStatus("success");
       setRetryState(null);
     } catch (err: unknown) {
       if (countdownInterval) clearInterval(countdownInterval);
 
       if (err instanceof Error && err.message === "Retry cancelled by user") {
+        console.info(`[SubmitSolution] Submission cancelled by user (${submissionId})`, {
+          challengeId,
+          address: address?.slice(0, 8) + "...",
+          attempts: submissionLog.attempts,
+        });
         setStatus("idle");
         setError("Submission cancelled.");
         setRetryState((prev) =>
@@ -91,10 +138,38 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
         return;
       }
 
+      // Log final submission failure
       if (err instanceof ApiError) {
+        submissionLog.errors.push({
+          attempt: submissionLog.attempts + 1,
+          error: err.message,
+          code: err.code,
+          status: err.status,
+        });
+
+        console.error(`[SubmitSolution] Submission failed after ${submissionLog.attempts} retries (${submissionId})`, {
+          challengeId,
+          address: address?.slice(0, 8) + "...",
+          totalAttempts: submissionLog.attempts + 1,
+          errors: submissionLog.errors,
+        });
+
         setError(ERROR_COPY[err.code] ?? err.message);
       } else {
-        setError(err instanceof Error ? err.message : "Submission failed");
+        const errorMsg = err instanceof Error ? err.message : "Submission failed";
+        submissionLog.errors.push({
+          attempt: submissionLog.attempts + 1,
+          error: errorMsg,
+        });
+
+        console.error(`[SubmitSolution] Unexpected error (${submissionId})`, {
+          challengeId,
+          address: address?.slice(0, 8) + "...",
+          totalAttempts: submissionLog.attempts + 1,
+          errors: submissionLog.errors,
+        });
+
+        setError(errorMsg);
       }
       setStatus("error");
       setRetryState(null);
