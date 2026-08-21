@@ -133,19 +133,23 @@ src/
 │   └── dashboard/page.tsx      # User progress dashboard
 │
 ├── components/
-│   ├── Navbar.tsx              # Top navigation
+│   ├── Navbar.tsx              # Top navigation + realtime connection indicator
 │   ├── WalletButton.tsx        # Connect / disconnect wallet
 │   ├── ChallengeCard.tsx       # Challenge list card
 │   ├── DifficultyBadge.tsx     # Beginner / Intermediate / Advanced pill
 │   ├── DifficultyFilter.tsx    # Filter bar for challenges page
-│   ├── SubmitSolution.tsx      # Solution submission form
+│   ├── SubmitSolution.tsx      # Solution submission form + live status stepper
 │   └── ProgressStats.tsx       # Dashboard stats + completed list
 │
 ├── context/
-│   └── WalletContext.tsx       # Freighter wallet state (connect, sign, disconnect)
+│   └── WalletContext.tsx       # Freighter wallet state + realtime feed wiring
+│
+├── hooks/
+│   └── useRealtimeSubmissions.ts  # Subscribe components to live submission updates
 │
 ├── lib/
 │   ├── api.ts                  # Typed fetch helpers for the backend
+│   ├── websocket.ts            # Realtime connection manager (reconnect, dedup, polling)
 │   └── utils.ts                # cn() utility (clsx + tailwind-merge)
 │
 └── types/
@@ -189,6 +193,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NEXT_PUBLIC_BACKEND_URL` | `http://localhost:3001` | Plearn backend base URL |
+| `NEXT_PUBLIC_WS_URL` | derived from backend URL | WebSocket endpoint for real-time submission status (e.g. `ws://localhost:3001/ws`) |
 | `NEXT_PUBLIC_STELLAR_NETWORK` | `testnet` | `testnet` or `mainnet` |
 | `NEXT_PUBLIC_CONTRACT_ID` | — | Deployed Soroban contract ID |
 
@@ -214,6 +219,12 @@ the layer is structured and how to add a new endpoint.
 - Full instructions view
 - Reward display
 - Solution submission form (requires wallet connection)
+
+### Real-Time Submission Status
+- Live status updates over WebSocket: `pending → validating → accepted → rewarded`
+- Automatic reconnection with exponential backoff; message deduplication
+- Connection indicator in the navbar; graceful fallback to polling when WebSocket is unavailable
+- See [`docs/WEBSOCKET.md`](./docs/WEBSOCKET.md) for the event schema
 
 ### Wallet Integration
 - One-click connect via **Freighter** browser extension
@@ -276,9 +287,9 @@ Please follow the existing code style (TypeScript strict, Tailwind utility class
 - [x] Leaderboard
 - [x] User progress dashboard
 - [ ] Mobile navigation drawer
-- [ ] Pagination for challenges and leaderboard
-- [ ] Real-time submission status via WebSocket
-- [ ] On-chain activity explorer
+- [x] Pagination for challenges and leaderboard
+- [x] Real-time submission status via WebSocket
+- [x] On-chain activity explorer
 - [ ] Dark / light theme toggle
 - [ ] Internationalization (i18n)
 

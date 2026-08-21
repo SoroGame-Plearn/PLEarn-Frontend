@@ -6,6 +6,8 @@ import {
   ChallengeSchema,
   LeaderboardListSchema,
   PaginatedActivitySchema,
+  PaginatedChallengeListSchema,
+  PaginatedLeaderboardListSchema,
   SubmissionResponseSchema,
   UserStatsSchema,
   type ActivityFilter,
@@ -14,6 +16,8 @@ import {
   type ChallengeList,
   type LeaderboardList,
   type PaginatedActivity,
+  type PaginatedChallengeList,
+  type PaginatedLeaderboardList,
   type SubmissionResponse,
   type UserProgress,
 } from "./schemas";
@@ -91,6 +95,129 @@ export const getChallenge = (id: string) =>
 
 export const getLeaderboard = () =>
   request<LeaderboardList>("/leaderboard", LeaderboardListSchema);
+
+// ─── Cursor-paginated list endpoints ─────────────────────────────────────────
+
+/** Shared shape of a cursor-paginated list response. */
+interface PaginatedEnvelope<T> {
+  items: T[];
+  hasMore: boolean;
+  nextCursor?: string | null;
+  total?: number;
+}
+
+/**
+ * Fetch a page of a cursor-paginated list endpoint.
+ *
+ * Accepts both the paginated envelope (`{ items, hasMore, nextCursor }`) and a
+ * legacy flat array (wrapped into the paginated shape), so callers always
+ * receive a uniform `Paginated…` object. Every failure mode surfaces as a
+ * typed `ApiError`, matching the rest of the API layer.
+ */
+async function fetchPaginated<T, P extends PaginatedEnvelope<T>>(
+  path: string,
+  params: URLSearchParams,
+  flatSchema: ZodType<T[]>,
+  paginatedSchema: ZodType<P>
+): Promise<P> {
+  const qs = params.toString();
+  const url = `${BASE}${path}${qs ? `?${qs}` : ""}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { cache: "no-store" });
+  } catch (err) {
+    throw new ApiError(`Network error while requesting ${path}`, {
+      code: "NETWORK_ERROR",
+      cause: err,
+    });
+  }
+
+  if (!res.ok) {
+    let details: unknown;
+    try { details = await res.json(); } catch { /* empty */ }
+    throw new ApiError(`API request to ${path} failed with status ${res.status}`, {
+      code: "HTTP_ERROR",
+      status: res.status,
+      details,
+    });
+  }
+
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch (err) {
+    throw new ApiError(`Failed to parse JSON response from ${path}`, {
+      code: "PARSE_ERROR",
+      status: res.status,
+      cause: err,
+    });
+  }
+
+  // Legacy flat-array fallback.
+  if (Array.isArray(body)) {
+    const parsed = flatSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ApiError(`Response from ${path} did not match the expected schema`, {
+        code: "VALIDATION_ERROR",
+        status: res.status,
+        details: parsed.error.flatten(),
+      });
+    }
+    return { items: parsed.data, hasMore: false, nextCursor: null } as P;
+  }
+
+  const parsed = paginatedSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError(`Response from ${path} did not match the expected schema`, {
+      code: "VALIDATION_ERROR",
+      status: res.status,
+      details: parsed.error.flatten(),
+    });
+  }
+  return parsed.data;
+}
+
+export interface ChallengePageParams {
+  cursor?: string;
+  limit?: number;
+  /** Difficulty filter; omitted entirely when "all". */
+  difficulty?: string;
+}
+
+export const getChallengesPaginated = async (
+  params: ChallengePageParams = {}
+): Promise<PaginatedChallengeList> => {
+  const qs = new URLSearchParams();
+  if (params.cursor) qs.set("cursor", params.cursor);
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  if (params.difficulty && params.difficulty !== "all") qs.set("difficulty", params.difficulty);
+  return fetchPaginated(
+    "/challenges",
+    qs,
+    ChallengeListSchema,
+    PaginatedChallengeListSchema
+  );
+};
+
+export interface LeaderboardPageParams {
+  cursor?: string;
+  limit?: number;
+}
+
+export const getLeaderboardPaginated = async (
+  params: LeaderboardPageParams = {}
+): Promise<PaginatedLeaderboardList> => {
+  const qs = new URLSearchParams();
+  if (params.cursor) qs.set("cursor", params.cursor);
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  return fetchPaginated(
+    "/leaderboard",
+    qs,
+    LeaderboardListSchema,
+    PaginatedLeaderboardListSchema
+  );
+};
 
 export const getProgress = (address?: string) =>
   request<UserProgress>(
@@ -200,4 +327,10 @@ export const getActivity = async (
 
 export { ApiError };
 export type { ApiErrorCode } from "./api-error";
-export type { ActivityFilter, ActivityItem, PaginatedActivity };
+export type {
+  ActivityFilter,
+  ActivityItem,
+  PaginatedActivity,
+  PaginatedChallengeList,
+  PaginatedLeaderboardList,
+};

@@ -57,6 +57,12 @@ export const LeaderboardEntrySchema = z.object({
 
 export const LeaderboardListSchema = z.array(LeaderboardEntrySchema);
 
+/** Cursor-paginated challenge list — see `PaginatedSchema`. */
+export const PaginatedChallengeListSchema = PaginatedSchema(ChallengeSchema);
+
+/** Cursor-paginated leaderboard list — see `PaginatedSchema`. */
+export const PaginatedLeaderboardListSchema = PaginatedSchema(LeaderboardEntrySchema);
+
 // ─── User / progress schemas ─────────────────────────────────────────────────
 
 export const UserStatsSchema = z.object({
@@ -124,12 +130,69 @@ export const ActivityFilterSchema = z.object({
   limit: z.number().int().positive().optional(),
 });
 
+// ─── WebSocket / realtime schemas ─────────────────────────────────────────────
+
+/**
+ * Lifecycle of a solution submission as reported over the WebSocket.
+ *
+ *   pending     → backend received the submission, waiting in the queue
+ *   validating  → solution is being checked against the challenge
+ *   accepted    → solution passed validation, transaction broadcast
+ *   rewarded    → reward tokens distributed on-chain (terminal)
+ *   rejected    → solution failed validation (terminal)
+ */
+export const SubmissionStatusSchema = z.enum([
+  "pending",
+  "validating",
+  "accepted",
+  "rewarded",
+  "rejected",
+]);
+
+/** A single submission status update pushed by the backend over the WebSocket. */
+export const RealtimeSubmissionSchema = z.object({
+  /** Backend-assigned submission id — matches `SubmissionResponse.id`. */
+  submissionId: z.string(),
+  challengeId: z.string(),
+  status: SubmissionStatusSchema,
+  /** Stellar transaction hash once the submission has been broadcast. */
+  txHash: z.string().optional(),
+  /** PLN reward amount once the reward has been distributed. */
+  reward: z.number().optional(),
+  /** ISO-8601 timestamp of when this status was recorded by the backend. */
+  timestamp: z.string().datetime({ offset: true }),
+});
+
+/** Messages the client sends to the backend. */
+export const WsClientMessageSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("subscribe"),
+    /** Stellar public key whose submission updates should be pushed. */
+    address: z.string(),
+  }),
+  z.object({ type: z.literal("ping") }),
+]);
+
+/** Messages the backend sends to the client. */
+export const WsServerMessageSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("submission.update"),
+    data: RealtimeSubmissionSchema,
+    /** Optional server-assigned id used for client-side deduplication. */
+    eventId: z.string().optional(),
+  }),
+  z.object({ type: z.literal("pong") }),
+  z.object({ type: z.literal("error"), message: z.string() }),
+]);
+
 // ─── Inferred TypeScript types ───────────────────────────────────────────────
 
 export type Difficulty = z.infer<typeof DifficultySchema>;
 export type Challenge = z.infer<typeof ChallengeSchema>;
 export type ChallengeList = z.infer<typeof ChallengeListSchema>;
+export type PaginatedChallengeList = z.infer<typeof PaginatedChallengeListSchema>;
 export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
+export type PaginatedLeaderboardList = z.infer<typeof PaginatedLeaderboardListSchema>;
 export type LeaderboardList = z.infer<typeof LeaderboardListSchema>;
 export type UserProgress = z.infer<typeof UserStatsSchema>;
 export type SubmissionResponse = z.infer<typeof SubmissionResponseSchema>;
@@ -140,3 +203,8 @@ export type ActivityItem = z.infer<typeof ActivityItemSchema>;
 export type ActivityList = z.infer<typeof ActivityListSchema>;
 export type PaginatedActivity = z.infer<typeof PaginatedActivitySchema>;
 export type ActivityFilter = z.infer<typeof ActivityFilterSchema>;
+
+export type SubmissionStatus = z.infer<typeof SubmissionStatusSchema>;
+export type RealtimeSubmission = z.infer<typeof RealtimeSubmissionSchema>;
+export type WsClientMessage = z.infer<typeof WsClientMessageSchema>;
+export type WsServerMessage = z.infer<typeof WsServerMessageSchema>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import ChallengeCard from "@/components/ChallengeCard";
 import DifficultyFilter from "@/components/DifficultyFilter";
 import { ChallengeGridSkeleton, ChallengeCardSkeleton } from "@/components/Skeleton";
@@ -13,7 +13,19 @@ const PAGE_SIZE = 20;
 
 type LoadState = "idle" | "loading" | "loadingMore" | "error";
 
+/**
+ * Wraps the list in a Suspense boundary — required because the content below
+ * calls `useSearchParams()`, which bails out of static rendering otherwise.
+ */
 export default function ChallengesPage() {
+  return (
+    <Suspense fallback={<ChallengeGridSkeleton count={PAGE_SIZE} />}>
+      <ChallengesContent />
+    </Suspense>
+  );
+}
+
+function ChallengesContent() {
   const searchParams = useSearchParams();
   const difficulty = searchParams.get("difficulty") ?? "all";
 
