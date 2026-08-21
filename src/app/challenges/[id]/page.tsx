@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { ApiError, getChallenge } from "@/lib/api";
 import SubmitSolution from "@/components/SubmitSolution";
+import WalletErrorBoundary from "@/components/WalletErrorBoundary";
 import DifficultyBadge from "@/components/DifficultyBadge";
 import { notFound } from "next/navigation";
 
@@ -44,7 +45,13 @@ export default async function ChallengePage({
         </p>
       </div>
 
-      <SubmitSolution challengeId={challenge.id} />
+      <WalletErrorBoundary>
+        <SubmitSolution
+          challengeId={challenge.id}
+          challengeTitle={challenge.title}
+          reward={challenge.reward}
+        />
+      </WalletErrorBoundary>
     </div>
   );
 }

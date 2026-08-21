@@ -59,7 +59,7 @@ describe("Retry Logic", () => {
       const mockFn = vi
         .fn()
         .mockRejectedValueOnce(
-          new ApiError("Network error", 500, "HTTP_ERROR")
+          new ApiError("Network error", { code: "HTTP_ERROR", status: 500 })
         )
         .mockResolvedValueOnce("success");
 
@@ -78,7 +78,7 @@ describe("Retry Logic", () => {
       const mockFn = vi
         .fn()
         .mockRejectedValueOnce(
-          new ApiError("Server error", 500, "HTTP_ERROR")
+          new ApiError("Server error", { code: "HTTP_ERROR", status: 500 })
         )
         .mockResolvedValueOnce("success");
 
@@ -96,7 +96,7 @@ describe("Retry Logic", () => {
       const mockFn = vi.fn(async () => {
         callCount++;
         if (callCount === 1) {
-          throw new ApiError("Too many requests", 429, "HTTP_ERROR");
+          throw new ApiError("Too many requests", { code: "HTTP_ERROR", status: 429 });
         }
         return "success";
       });
@@ -114,7 +114,7 @@ describe("Retry Logic", () => {
       const mockFn = vi
         .fn()
         .mockRejectedValue(
-          new ApiError("Server error", 500, "HTTP_ERROR")
+          new ApiError("Server error", { code: "HTTP_ERROR", status: 500 })
         );
 
       await expect(
@@ -133,7 +133,7 @@ describe("Retry Logic", () => {
       const mockFn = vi
         .fn()
         .mockRejectedValueOnce(
-          new ApiError("Server error", 500, "HTTP_ERROR")
+          new ApiError("Server error", { code: "HTTP_ERROR", status: 500 })
         )
         .mockResolvedValueOnce("success");
 
@@ -171,7 +171,7 @@ describe("Retry Logic", () => {
       const mockFn = vi
         .fn()
         .mockRejectedValue(
-          new ApiError("Server error", 500, "HTTP_ERROR")
+          new ApiError("Server error", { code: "HTTP_ERROR", status: 500 })
         );
 
       const config: RetryConfig = {
@@ -190,7 +190,7 @@ describe("Retry Logic", () => {
       const mockFn = vi
         .fn()
         .mockRejectedValueOnce(
-          new ApiError("Network unavailable", 0, "NETWORK_ERROR")
+          new ApiError("Network unavailable", { code: "NETWORK_ERROR" })
         )
         .mockResolvedValueOnce("success");
 
@@ -206,7 +206,7 @@ describe("Retry Logic", () => {
       const mockFn = vi
         .fn()
         .mockRejectedValue(
-          new ApiError("Server error", 500, "HTTP_ERROR")
+          new ApiError("Server error", { code: "HTTP_ERROR", status: 500 })
         );
 
       await expect(
