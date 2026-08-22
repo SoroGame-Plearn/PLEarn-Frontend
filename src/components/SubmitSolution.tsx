@@ -3,9 +3,27 @@
 import { useRef, useState } from "react";
 import { useWallet } from "@/context/WalletContext";
 import { useRealtimeSubmissions } from "@/hooks/useRealtimeSubmissions";
+import { WalletErrorNotice } from "@/components/WalletErrorBoundary";
 import { ApiError, submitSolution } from "@/lib/api";
 import { withRetry, type RetryState } from "@/lib/retry";
-import { CheckCircle, Loader2, X } from "lucide-react";
+import {
+  createSubmissionLog,
+  logRetryAttempt,
+  logSubmissionCancelled,
+  logSubmissionFailure,
+  logSubmissionSuccess,
+} from "@/lib/submission-logger";
+import { cn } from "@/lib/utils";
+import type { RealtimeSubmission, SubmissionStatus } from "@/types";
+import {
+  Check,
+  CheckCircle2,
+  Clock,
+  Coins,
+  Loader2,
+  X,
+  XCircle,
+} from "lucide-react";
 
 const ERROR_COPY: Record<string, string> = {
   NETWORK_ERROR: "Couldn't reach the server. Check your connection and try again.",
@@ -71,7 +89,7 @@ function explorerUrl(txHash: string): string {
   return `${base}/${txHash}`;
 }
 
-// ─── Status UI ────────────────────────────────────────────────────────────────
+// === Status UI
 
 function SubmissionStatusCard({
   submission,
@@ -83,8 +101,7 @@ function SubmissionStatusCard({
   const currentIdx = STATUS_STEPS.indexOf(status);
 
   return (
-    <div className="bg-card border border-white/5 rounded-2xl p-6">
-      {/* Header */}
+    <div className="bg-white dark:bg-card border border-black/10 dark:border-white/5 rounded-2xl p-6">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           {status === "rewarded" ? (
@@ -93,8 +110,12 @@ function SubmissionStatusCard({
             <Loader2 size={22} className="text-brand-light animate-spin shrink-0" />
           )}
           <div>
-            <p className="font-semibold">{STATUS_META[status].label}</p>
-            <p className="text-sm text-gray-400">{STATUS_META[status].description}</p>
+            <p className="font-semibold text-gray-900 dark:text-white">
+              {STATUS_META[status].label}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {STATUS_META[status].description}
+            </p>
           </div>
         </div>
         {status === "rewarded" && submission.reward !== undefined && (
@@ -104,7 +125,6 @@ function SubmissionStatusCard({
         )}
       </div>
 
-      {/* Stepper */}
       <ol className="flex flex-col gap-4">
         {STATUS_STEPS.map((step, i) => {
           const Icon = STEP_ICONS[step];
@@ -119,7 +139,7 @@ function SubmissionStatusCard({
                     ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
                     : active
                       ? "bg-brand/20 border-brand/50 text-brand-light"
-                      : "bg-white/5 border-white/10 text-gray-500"
+                      : "bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-gray-500"
                 )}
                 aria-hidden="true"
               >
@@ -135,7 +155,9 @@ function SubmissionStatusCard({
               <span
                 className={cn(
                   "text-sm font-medium",
-                  done || active ? "text-white" : "text-gray-500"
+                  done || active
+                    ? "text-gray-900 dark:text-white"
+                    : "text-gray-500"
                 )}
               >
                 {STATUS_META[step].label}
@@ -145,7 +167,6 @@ function SubmissionStatusCard({
         })}
       </ol>
 
-      {/* Transaction link once broadcast */}
       {submission.txHash && (
         <a
           href={explorerUrl(submission.txHash)}
@@ -162,7 +183,7 @@ function SubmissionStatusCard({
 
 function SubmissionRejectedCard({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="flex flex-col gap-4 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-400">
+    <div className="flex flex-col gap-4 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-red-600 dark:text-red-400">
       <div className="flex items-center gap-3">
         <XCircle size={20} className="shrink-0" />
         <div>
@@ -180,19 +201,38 @@ function SubmissionRejectedCard({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// === Main component
 
-export default function SubmitSolution({ challengeId }: { challengeId: string }) {
-  const { address, connected, connect, signTx } = useWallet();
-  const { submissions, mode } = useRealtimeSubmissions(challengeId);
+export default function SubmitSolution({
+  challengeId,
+  challengeTitle,
+  reward,
+}: {
+  challengeId: string;
+  challengeTitle?: string;
+  reward?: number;
+}) {
+  const {
+    address,
+    connected,
+    connect,
+    signTx,
+    signing,
+    error: walletError,
+    clearError,
+    recover,
+  } = useWallet();
+  const { submissions } = useRealtimeSubmissions(challengeId);
 
-  const [solution, setSolution] = useState("");
+  const [solution, setSolution] = useState<string>("");
   const [phase, setPhase] = useState<"idle" | "submitting" | "tracking">("idle");
   const [submissionId, setSubmissionId] = useState<string | null>(null);
-  const [fallbackStatus, setFallbackStatus] = useState<SubmissionStatus | null>(null);
-  const [error, setError] = useState("");
+  const [fallbackStatus, setFallbackStatus] = useState<SubmissionStatus | null>(
+    null
+  );
+  const [error, setError] = useState<string>("");
   const [retryState, setRetryState] = useState<RetryState | null>(null);
-  const [nextRetryCountdown, setNextRetryCountdown] = useState(0);
+  const [nextRetryCountdown, setNextRetryCountdown] = useState<number>(0);
   const retryAbortRef = useRef<(() => void) | null>(null);
 
   // Live update for our submission (once POST /submit has returned an id).
@@ -211,39 +251,38 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
       }
     : null;
 
+  const busy = phase === "submitting" || signing;
+
   function reset() {
     setPhase("idle");
     setSubmissionId(null);
     setFallbackStatus(null);
     setError("");
+    setRetryState(null);
+    // Releases the signed-transaction dedup entry so the same solution can be
+    // signed again after a failure, without a page reload.
+    recover();
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!connected || !address) return connect();
+
     setPhase("submitting");
     setError("");
     setRetryState(null);
 
-    const submissionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const submissionLog = {
-      id: submissionId,
-      timestamp: new Date().toISOString(),
-      address,
-      challengeId,
-      attempts: 0,
-      errors: [] as Array<{ attempt: number; error: string; code?: string; status?: number }>,
-    };
+    const log = createSubmissionLog(address, challengeId);
+    const abortController = new AbortController();
+    retryAbortRef.current = () => abortController.abort();
+    let countdownInterval: ReturnType<typeof setInterval> | null = null;
 
     try {
-      const signedXdr = await signTx(solution);
-
-      const abortController = new AbortController();
-      retryAbortRef.current = () => {
-        abortController.abort();
-      };
-
-      let countdownInterval: NodeJS.Timeout | null = null;
+      const signedXdr = await signTx(solution, {
+        action: "Submit solution",
+        challenge: challengeTitle,
+        reward,
+      });
 
       const { result } = await withRetry(
         async () => {
@@ -256,41 +295,36 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
           maxRetries: 3,
           baseDelay: 1000,
           maxDelay: 30000,
-          onRetry: (attempt, delay, error) => {
-            // Log retry attempt for debugging
-            submissionLog.attempts = attempt;
-            const errorLog = {
+          onRetry: (attempt, delay, err) => {
+            log.attempts = attempt;
+            log.errors.push({
               attempt,
-              error: error.message,
-              code: error instanceof ApiError ? error.code : undefined,
-              status: error instanceof ApiError ? error.status : undefined,
-            };
-            submissionLog.errors.push(errorLog);
-
-            console.warn(
-              `[SubmitSolution] Retry attempt ${attempt} of 3 (${submissionId})`,
+              error: err.message,
+              code: err instanceof ApiError ? err.code : undefined,
+              status: err instanceof ApiError ? err.status : undefined,
+            });
+            logRetryAttempt(
+              log.id,
+              attempt,
+              delay,
               {
-                challengeId,
-                address: address?.slice(0, 8) + "...",
-                error: error.message,
-                code: errorLog.code,
-                status: errorLog.status,
-                waitMs: delay,
-              }
+                message: err.message,
+                code: err instanceof ApiError ? err.code : undefined,
+                status: err instanceof ApiError ? err.status : undefined,
+              },
+              { challengeId, address }
             );
 
-            const newRetryState: RetryState = {
+            setRetryState({
               attempt,
               nextRetryIn: delay,
               isRetrying: true,
               isCancelled: false,
-            };
-            setRetryState(newRetryState);
+            });
 
             if (countdownInterval) clearInterval(countdownInterval);
             let remainingMs = delay;
             setNextRetryCountdown(Math.ceil(remainingMs / 1000));
-
             countdownInterval = setInterval(() => {
               remainingMs -= 100;
               if (remainingMs <= 0) {
@@ -303,116 +337,105 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
         }
       );
 
-      if (countdownInterval) clearInterval(countdownInterval);
-      retryAbortRef.current = null;
+      logSubmissionSuccess(
+        log.id,
+        log.attempts + 1,
+        log.attempts,
+        log.errors.length,
+        { challengeId, address }
+      );
 
-      // Log successful submission
-      console.info(`[SubmitSolution] Submission successful (${submissionId})`, {
-        challengeId,
-        address: address?.slice(0, 8) + "...",
-        successfulAttempt: submissionLog.attempts + 1,
-        totalRetries: submissionLog.attempts,
-        totalErrors: submissionLog.errors.length,
-      });
-
-      setStatus("success");
+      setSubmissionId(result.id);
+      setFallbackStatus("pending");
+      setPhase("tracking");
       setRetryState(null);
     } catch (err: unknown) {
-      if (countdownInterval) clearInterval(countdownInterval);
-
       if (err instanceof Error && err.message === "Retry cancelled by user") {
-        console.info(`[SubmitSolution] Submission cancelled by user (${submissionId})`, {
-          challengeId,
-          address: address?.slice(0, 8) + "...",
-          attempts: submissionLog.attempts,
-        });
-        setStatus("idle");
+        logSubmissionCancelled(log.id, log.attempts, { challengeId, address });
+        setPhase("idle");
         setError("Submission cancelled.");
-        setRetryState((prev) =>
-          prev ? { ...prev, isCancelled: true } : null
-        );
+        setRetryState((prev) => (prev ? { ...prev, isCancelled: true } : null));
         return;
       }
 
-      // Log final submission failure
+      // Wallet failures already render through WalletErrorNotice, so only
+      // API and unexpected failures need a message here.
       if (err instanceof ApiError) {
-        submissionLog.errors.push({
-          attempt: submissionLog.attempts + 1,
+        log.errors.push({
+          attempt: log.attempts + 1,
           error: err.message,
           code: err.code,
           status: err.status,
         });
-
-        console.error(`[SubmitSolution] Submission failed after ${submissionLog.attempts} retries (${submissionId})`, {
+        logSubmissionFailure(log.id, log.attempts + 1, log.errors, {
           challengeId,
-          address: address?.slice(0, 8) + "...",
-          totalAttempts: submissionLog.attempts + 1,
-          errors: submissionLog.errors,
+          address,
         });
-
         setError(ERROR_COPY[err.code] ?? err.message);
-      } else {
-        const errorMsg = err instanceof Error ? err.message : "Submission failed";
-        submissionLog.errors.push({
-          attempt: submissionLog.attempts + 1,
-          error: errorMsg,
-        });
-
-        console.error(`[SubmitSolution] Unexpected error (${submissionId})`, {
-          challengeId,
-          address: address?.slice(0, 8) + "...",
-          totalAttempts: submissionLog.attempts + 1,
-          errors: submissionLog.errors,
-        });
-
-        setError(errorMsg);
+      } else if (!walletError) {
+        setError(err instanceof Error ? err.message : "Submission failed");
       }
-      setStatus("error");
-      setRetryState(null);
-    }
-  }
 
-  function handleCancelRetry() {
-    if (retryAbortRef.current) {
-      retryAbortRef.current();
+      setPhase("idle");
+      setRetryState(null);
+    } finally {
+      if (countdownInterval) clearInterval(countdownInterval);
       retryAbortRef.current = null;
     }
   }
 
+  function handleCancelRetry() {
+    retryAbortRef.current?.();
+    retryAbortRef.current = null;
+  }
+
   // ── Tracking view: live status stepper ──
-  if (phase === "tracking") {
+  if (phase === "tracking" && fallbackSubmission) {
+    if (currentStatus === "rejected") {
+      return <SubmissionRejectedCard onRetry={reset} />;
+    }
     return (
-      <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-6 text-green-600 dark:text-green-400">
-        <CheckCircle size={20} />
-        <span className="font-semibold">Solution submitted! Reward is on its way.</span>
-      </div>
+      <SubmissionStatusCard
+        submission={live ?? fallbackSubmission}
+        status={currentStatus ?? "pending"}
+      />
     );
   }
 
   // ── Form view ──
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <h2 className="font-semibold text-lg text-gray-900 dark:text-white">Submit Your Solution</h2>
+      <h2 className="font-semibold text-lg text-gray-900 dark:text-white">
+        Submit Your Solution
+      </h2>
       <textarea
         value={solution}
         onChange={(e) => setSolution(e.target.value)}
         placeholder="Paste your signed transaction XDR or solution hash…"
         rows={5}
         required
-        disabled={status === "loading"}
-        className="bg-card border border-white/10 focus:border-brand outline-none rounded-xl p-4 text-sm font-mono resize-none transition disabled:opacity-50"
+        disabled={busy}
+        className="bg-white dark:bg-card border border-black/10 dark:border-white/10 focus:border-brand outline-none rounded-xl p-4 text-sm font-mono resize-none transition disabled:opacity-50 text-gray-900 dark:text-white"
       />
 
-      {retryState && retryState.isRetrying && (
+      {walletError && (
+        <WalletErrorNotice
+          error={walletError}
+          onRetry={reset}
+          onDismiss={clearError}
+        />
+      )}
+
+      {retryState?.isRetrying && (
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <Loader2 size={16} className="animate-spin text-blue-400" />
             <span className="text-sm text-blue-400">
-              Retry attempt {retryState.attempt} of 4...
+              Retry attempt {retryState.attempt} of 3…
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex-1 bg-white/10 rounded-full h-1 overflow-hidden">
+            <div className="flex-1 bg-black/10 dark:bg-white/10 rounded-full h-1 overflow-hidden">
               <div
                 className="bg-blue-500 h-full transition-all"
                 style={{
@@ -427,23 +450,27 @@ export default function SubmitSolution({ challengeId }: { challengeId: string })
         </div>
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
 
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={status === "loading"}
-          className="flex-1 flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark transition px-6 py-3 rounded-xl font-semibold disabled:opacity-50"
+          disabled={busy}
+          className="flex-1 flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark transition px-6 py-3 rounded-xl font-semibold text-white disabled:opacity-50"
         >
-          {status === "loading" && <Loader2 size={16} className="animate-spin" />}
-          {connected ? "Submit Solution" : "Connect Wallet to Submit"}
+          {busy && <Loader2 size={16} className="animate-spin" />}
+          {!connected
+            ? "Connect Wallet to Submit"
+            : signing
+              ? "Waiting for Freighter…"
+              : "Submit Solution"}
         </button>
 
-        {retryState && retryState.isRetrying && (
+        {retryState?.isRetrying && (
           <button
             type="button"
             onClick={handleCancelRetry}
-            className="flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl font-semibold transition"
+            className="flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-500 dark:text-red-400 px-4 py-3 rounded-xl font-semibold transition"
           >
             <X size={16} />
             Cancel
