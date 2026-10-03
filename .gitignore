@@ -1,7 +1,5 @@
 node_modules/
 .next/
-.env.local
-.env
 out/
 *.tsbuildinfo
 
@@ -9,3 +7,4 @@ out/
 playwright-report/
 test-results/
 .auth/
+config.bat
